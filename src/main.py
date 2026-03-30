@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, classification_report
 from PIL import Image
 import random
 
@@ -42,22 +42,27 @@ def load_and_preprocess(num_samples=2377):
         if os.path.isdir(os.path.join(DATASET_PATH, d)) and not d.startswith("_")
     ]
 
-    target_path = os.path.join(DATASET_PATH, "yes")
-    target_files = os.listdir(target_path)
-    random.shuffle(target_files)
-    target_files = target_files[:num_samples]
+    target_categories = ["yes", "bed", "cat"]
+    other_categories = [c for c in categories if c not in target_categories]
 
-    print(f"Loading {len(target_files)} samples for category 'yes'...")
-    for f in target_files:
-        img = plt.imread(os.path.join(target_path, f))
-        X.append(process_image_resize(img))
-        y.append(1)
+    # Load targets
+    for idx, target in enumerate(target_categories):
+        target_path = os.path.join(DATASET_PATH, target)
+        target_files = os.listdir(target_path)
+        random.shuffle(target_files)
+        target_files = target_files[:num_samples]
 
-    other_categories = [c for c in categories if c != "yes"]
+        print(f"Loading {len(target_files)} samples for category '{target}'...")
+        for f in target_files:
+            img = plt.imread(os.path.join(target_path, f))
+            X.append(process_image_resize(img))
+            y.append(idx + 1)
+
+    # Load others
     samples_per_other = num_samples // len(other_categories) + 1
     count_0 = 0
 
-    print(f"Loading samples for other categories...")
+    print("Loading samples for other categories...")
     for cat in other_categories:
         cat_path = os.path.join(DATASET_PATH, cat)
         cat_files = os.listdir(cat_path)
@@ -90,14 +95,18 @@ def train_and_evaluate(X, y):
     y_pred = model.predict(X_test_scaled)
     acc = accuracy_score(y_test, y_pred)
 
+    target_names = ["others", "yes", "bed", "cat"]
+    print("\nClassification Report:")
+    print(classification_report(y_test, y_pred, target_names=target_names))
+
     return acc
 
 
 if __name__ == "__main__":
-    print("--- Training Model ---")
-    num_samples = 2377
+    print("--- Training Model (Recognizing: yes, bed, cat) ---")
+    num_samples = 1700
 
     X, y = load_and_preprocess(num_samples=num_samples)
     accuracy = train_and_evaluate(X, y)
 
-    print(f"\nFinal Accuracy (Resizing): {accuracy:.4f}")
+    print(f"\nFinal Accuracy: {accuracy:.4f}")
